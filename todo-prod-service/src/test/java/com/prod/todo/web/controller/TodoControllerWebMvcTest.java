@@ -17,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.instancio.Select.field;
@@ -51,6 +52,16 @@ class TodoControllerWebMvcTest {
         return Instancio.ofList(Todo.class).size(size).create();
     }
 
+
+    private List<Todo> generateTodoListWithUserId(int size, String userId) {
+        return Instancio.ofList(Todo.class).size(size)
+                .supply(field(Todo::getUserId), () -> userId)
+                .supply(field(Todo::getId), () -> 1L)
+                .supply(field(Todo::getTitle), () -> "Task Title")
+                .supply(field(Todo::isCompleted), () -> false)
+                .create();
+    }
+
     @Test
     void getAllTodos_ShouldReturnAllTodos() throws Exception {
         List<Todo> todos = generateTodoList(3);
@@ -61,6 +72,21 @@ class TodoControllerWebMvcTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].id").exists());
+    }
+
+    @Test
+    void getTodoByUserId_WhenExists_ShouldReturnTodos() throws Exception {
+        // Prepare single userId and test data
+        String userId = UUID.randomUUID().toString();
+
+        List<Todo> todos = generateTodoListWithUserId(3, userId);
+
+        given(todoService.getAllTodosByUserId(userId)).willReturn(todos);
+
+        mockMvc.perform(get("/todo/user/{userId}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].userId").value(userId));
     }
 
     @Test
