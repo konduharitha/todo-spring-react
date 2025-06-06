@@ -2,6 +2,7 @@ package com.prod.todo.service.impl;
 
 import com.prod.todo.entity.TodoEntity;
 import com.prod.todo.entity.TodoLogEntity;
+import com.prod.todo.enums.TodoStatus;
 import com.prod.todo.mapper.TodoMapper;
 import com.prod.todo.model.ResponseStatus;
 import com.prod.todo.model.Todo;
@@ -88,11 +89,21 @@ public class TodoServiceImpl implements TodoService {
 
         return transactionTemplate.execute(status -> {
             try {
-                todoRepository.deleteById(id);
-                return ResponseStatus.builder()
-                        .isSuccess(Boolean.TRUE)
-                        .message("Successfully deleted todo of id " + id)
-                        .build();
+                Optional<TodoEntity> todo = todoRepository.findById(id);
+                if(todo.isPresent()){
+                    TodoEntity todoEntity = todo.get();
+                    todoEntity.setStatus(TodoStatus.DELETED);
+                    todoRepository.save(todoEntity);
+                    return ResponseStatus.builder()
+                            .isSuccess(Boolean.TRUE)
+                            .message("Successfully deleted todo of id " + id)
+                            .build();
+                }else {
+                    return ResponseStatus.builder()
+                            .isSuccess(Boolean.TRUE)
+                            .message("Todo not found for id " + id)
+                            .build();
+                }
             } catch (Exception ex) {
                 status.setRollbackOnly();
                 throw ex;
